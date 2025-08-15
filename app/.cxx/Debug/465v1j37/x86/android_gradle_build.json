@@ -1,0 +1,38 @@
+{
+  "buildFiles": [
+    "C:\\Users\\Jose_Enrique\\Documents\\AndroidStudioProjects\\pub-yolo-android-main\\pub-yolo-android-main\\app\\src\\main\\cpp\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "C:\\Users\\Jose_Enrique\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "C:\\Users\\Jose_Enrique\\Documents\\AndroidStudioProjects\\pub-yolo-android-main\\pub-yolo-android-main\\app\\.cxx\\Debug\\465v1j37\\x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "C:\\Users\\Jose_Enrique\\AppData\\Local\\Android\\Sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "C:\\Users\\Jose_Enrique\\Documents\\AndroidStudioProjects\\pub-yolo-android-main\\pub-yolo-android-main\\app\\.cxx\\Debug\\465v1j37\\x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "image_processing::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "x86",
+      "artifactName": "image_processing",
+      "output": "C:\\Users\\Jose_Enrique\\Documents\\AndroidStudioProjects\\pub-yolo-android-main\\pub-yolo-android-main\\app\\build\\intermediates\\cxx\\Debug\\465v1j37\\obj\\x86\\libimage_processing.so",
+      "runtimeFiles": []
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "C:\\Users\\Jose_Enrique\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe",
+      "cppCompilerExecutable": "C:\\Users\\Jose_Enrique\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe"
+    }
+  },
+  "cFileExtensions": [],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}

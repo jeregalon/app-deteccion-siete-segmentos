@@ -1,0 +1,1 @@
+C:\Users\Jose_Enrique\Documents\AndroidStudioProjects\pub-yolo-android-main\pub-yolo-android-main\app\build\intermediates\cxx\Debug\465v1j37\obj\arm64-v8a

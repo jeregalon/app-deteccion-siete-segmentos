@@ -1,0 +1,3 @@
+C:/Users/Jose_Enrique/Documents/AndroidStudioProjects/pub-yolo-android-main/pub-yolo-android-main/app/.cxx/Debug/465v1j37/arm64-v8a/CMakeFiles/image_processing.dir
+C:/Users/Jose_Enrique/Documents/AndroidStudioProjects/pub-yolo-android-main/pub-yolo-android-main/app/.cxx/Debug/465v1j37/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/Jose_Enrique/Documents/AndroidStudioProjects/pub-yolo-android-main/pub-yolo-android-main/app/.cxx/Debug/465v1j37/arm64-v8a/CMakeFiles/rebuild_cache.dir

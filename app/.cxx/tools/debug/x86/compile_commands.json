@@ -1,0 +1,7 @@
+[
+{
+  "directory": "C:/Users/Jose_Enrique/Documents/AndroidStudioProjects/pub-yolo-android-main/pub-yolo-android-main/app/.cxx/Debug/465v1j37/x86",
+  "command": "C:\\Users\\Jose_Enrique\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=i686-none-linux-android26 --sysroot=C:/Users/Jose_Enrique/AppData/Local/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Dimage_processing_EXPORTS -IC:/Users/Jose_Enrique/AppData/Local/Android/Sdk/ndk/27.0.12077973/sources/android/cpufeatures -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -o CMakeFiles\\image_processing.dir\\image_processing.cpp.o -c C:\\Users\\Jose_Enrique\\Documents\\AndroidStudioProjects\\pub-yolo-android-main\\pub-yolo-android-main\\app\\src\\main\\cpp\\image_processing.cpp",
+  "file": "C:\\Users\\Jose_Enrique\\Documents\\AndroidStudioProjects\\pub-yolo-android-main\\pub-yolo-android-main\\app\\src\\main\\cpp\\image_processing.cpp"
+}
+]
