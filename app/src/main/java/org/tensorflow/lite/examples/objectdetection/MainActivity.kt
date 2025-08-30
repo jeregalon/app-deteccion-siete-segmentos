@@ -20,11 +20,14 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.view.Surface
+import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import org.tensorflow.lite.examples.objectdetection.databinding.ActivityMainBinding
@@ -51,6 +54,24 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
         }
     }
 
+    // Lanzador para tomar foto con la cámara
+    private val takePhotoLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data: Intent? = result.data
+            val bitmap = data?.extras?.get("data") as? Bitmap
+            bitmap?.let {
+                activityMainBinding.imageView.setImageBitmap(it)
+                // Guardar temporalmente en MediaStore para tener un Uri
+                val uri = saveBitmapToMediaStore(it)
+                selectedImageUri = uri
+                // Calcular rotación del teléfono
+                val rotation = getDeviceRotationInRadians()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activityMainBinding = ActivityMainBinding.inflate(layoutInflater)
@@ -73,6 +94,12 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
                 type = "image/*"
             }
             pickImageLauncher.launch(intent)
+        }
+
+        // Botón para abrir la cámara
+        activityMainBinding.btnCamera.setOnClickListener {
+            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            takePhotoLauncher.launch(intent)
         }
 
         // Botón para predecir cajas delimitadoras
@@ -102,6 +129,24 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+
+    // Guarda un Bitmap en MediaStore y devuelve un Uri
+    private fun saveBitmapToMediaStore(bitmap: Bitmap): Uri? {
+        val path = MediaStore.Images.Media.insertImage(contentResolver, bitmap, "captured_image", null)
+        return Uri.parse(path)
+    }
+
+    // Obtiene la rotación del dispositivo en radianes
+    private fun getDeviceRotationInRadians(): Float {
+        val rotation = (getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
+        return when (rotation) {
+            Surface.ROTATION_0 -> 0f
+            Surface.ROTATION_90 -> Math.PI.toFloat() / 2f
+            Surface.ROTATION_180 -> Math.PI.toFloat()
+            Surface.ROTATION_270 -> 3f * Math.PI.toFloat() / 2f
+            else -> 0f
         }
     }
 

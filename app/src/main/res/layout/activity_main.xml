@@ -23,6 +23,13 @@
         android:text="UPLOAD"
         android:layout_marginTop="16dp" />
 
+    <Button
+        android:id="@+id/btnCamera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="CAMERA"
+        android:layout_marginTop="8dp"/>
+
     <!-- Botón de predicción -->
     <Button
         android:id="@+id/btnPredict"
