@@ -16,23 +16,111 @@
 
 package org.tensorflow.lite.examples.objectdetection
 
+import android.app.Activity
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import org.tensorflow.lite.examples.objectdetection.databinding.ActivityMainBinding
+import org.tensorflow.lite.examples.objectdetection.detectors.ObjectDetection
 
 /**
  * Main entry point into our app. This app follows the single-activity pattern, and all
  * functionality is implemented in the form of fragments.
  */
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener {
 
     private lateinit var activityMainBinding: ActivityMainBinding
+    private var selectedImageUri: Uri? = null
+    private var detectorHelper: ObjectDetectorHelper? = null
+
+    // Registrar el lanzador para elegir imagen de la galería
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data: Intent? = result.data
+            selectedImageUri = data?.data
+            activityMainBinding.imageView.setImageURI(selectedImageUri) // mostrar la imagen en el ImageView
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activityMainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(activityMainBinding.root)
+
+        // Inicializar el detector YOLO
+        detectorHelper = ObjectDetectorHelper(
+            threshold = 0.5f,
+            numThreads = 2,
+            maxResults = 3,
+            currentDelegate = ObjectDetectorHelper.DELEGATE_CPU,
+            currentModel = ObjectDetectorHelper.MODEL_YOLO,
+            context = this,
+            objectDetectorListener = this
+        )
+
+        // Botón para subir imagen
+        activityMainBinding.btnUpload.setOnClickListener {
+            val intent = Intent(Intent.ACTION_PICK).apply {
+                type = "image/*"
+            }
+            pickImageLauncher.launch(intent)
+        }
+
+        // Botón para predecir cajas delimitadoras
+        activityMainBinding.btnPredict.setOnClickListener {
+            selectedImageUri?.let { uri ->
+                val bitmap = getBitmapFromUri(uri)
+                bitmap?.let {
+                    // Por ahora rotación = 0, puedes adaptarlo si quieres
+                    detectorHelper?.detect(it, 0)
+                }
+            } ?: run {
+                println("⚠️ Selecciona una imagen antes de predecir")
+            }
+        }
+    }
+
+    // Convierte un Uri a Bitmap
+    private fun getBitmapFromUri(uri: Uri): Bitmap? {
+        return try {
+            if (Build.VERSION.SDK_INT >= 28) {
+                val source = ImageDecoder.createSource(this.contentResolver, uri)
+                ImageDecoder.decodeBitmap(source).copy(Bitmap.Config.ARGB_8888, true)
+            } else {
+                MediaStore.Images.Media.getBitmap(this.contentResolver, uri)
+                    .copy(Bitmap.Config.ARGB_8888, true)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    // Implementación de DetectorListener
+    override fun onError(error: String) {
+        println("🚨 Detector error: $error")
+    }
+
+    override fun onResults(
+        results: List<ObjectDetection>,
+        inferenceTime: Long,
+        imageHeight: Int,
+        imageWidth: Int
+    ) {
+        println("✅ Detección completada en $inferenceTime ms")
+        for (det in results) {
+            println("Objeto detectado: ${det.category.label} (${det.category.confidence})")
+            println("BoundingBox: ${det.boundingBox}")
+        }
     }
 
     override fun onBackPressed() {

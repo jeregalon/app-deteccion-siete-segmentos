@@ -62,7 +62,7 @@ class ObjectDetectorHelper(
 
         try {
 
-            if (currentModel == MODEL_YOLO) {
+//            if (currentModel == MODEL_YOLO) {
 
                 objectDetector = YoloDetector(
 
@@ -76,49 +76,49 @@ class ObjectDetectorHelper(
 
                 )
 
-            }
-            else {
+//            }
+//            else {
+//
+//                // Create the base options for the detector using specifies max results and score threshold
+//                val optionsBuilder =
+//                    ObjectDetectorOptions.builder()
+//                        .setScoreThreshold(threshold)
+//                        .setMaxResults(maxResults)
+//
+//                // Set general detection options, including number of used threads
+//                val baseOptionsBuilder = BaseOptions.builder().setNumThreads(numThreads)
+//
+//                // Use the specified hardware for running the model. Default to CPU
+//                when (currentDelegate) {
+//                    DELEGATE_CPU -> {
+//                        // Default
+//                    }
+//                    DELEGATE_GPU -> {
+////                        if (CompatibilityList().isDelegateSupportedOnThisDevice) {
+////                            baseOptionsBuilder.useGpu()
+////                        } else {
+////                            objectDetectorListener?.onError("GPU is not supported on this device")
+////                        }
+//                        // for some reason CompatibilityList().isDelegateSupportedOnThisDevice
+//                        // returns False in my Motorola Edge 30 Ultra, but GPU works :/
+//                        baseOptionsBuilder.useGpu()
+//                    }
+//                    DELEGATE_NNAPI -> {
+//                        baseOptionsBuilder.useNnapi()
+//                    }
+//                }
 
-                // Create the base options for the detector using specifies max results and score threshold
-                val optionsBuilder =
-                    ObjectDetectorOptions.builder()
-                        .setScoreThreshold(threshold)
-                        .setMaxResults(maxResults)
-
-                // Set general detection options, including number of used threads
-                val baseOptionsBuilder = BaseOptions.builder().setNumThreads(numThreads)
-
-                // Use the specified hardware for running the model. Default to CPU
-                when (currentDelegate) {
-                    DELEGATE_CPU -> {
-                        // Default
-                    }
-                    DELEGATE_GPU -> {
-//                        if (CompatibilityList().isDelegateSupportedOnThisDevice) {
-//                            baseOptionsBuilder.useGpu()
-//                        } else {
-//                            objectDetectorListener?.onError("GPU is not supported on this device")
-//                        }
-                        // for some reason CompatibilityList().isDelegateSupportedOnThisDevice
-                        // returns False in my Motorola Edge 30 Ultra, but GPU works :/
-                        baseOptionsBuilder.useGpu()
-                    }
-                    DELEGATE_NNAPI -> {
-                        baseOptionsBuilder.useNnapi()
-                    }
-                }
-
-                optionsBuilder.setBaseOptions(baseOptionsBuilder.build())
-                val options = optionsBuilder.build()
-
-                objectDetector = TaskVisionDetector(
-                    options,
-                    currentModel,
-                    context,
-
-                )
-
-            }
+//                optionsBuilder.setBaseOptions(baseOptionsBuilder.build())
+//                val options = optionsBuilder.build()
+//
+//                objectDetector = TaskVisionDetector(
+//                    options,
+//                    currentModel,
+//                    context,
+//
+//                )
+//
+//            }
 
 
         }

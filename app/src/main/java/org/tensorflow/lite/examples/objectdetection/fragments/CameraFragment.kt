@@ -67,10 +67,10 @@ class CameraFragment : Fragment(), ObjectDetectorHelper.DetectorListener {
         super.onResume()
         // Make sure that all permissions are still present, since the
         // user could have removed them while the app was in paused state.
-        if (!PermissionsFragment.hasPermissions(requireContext())) {
-            Navigation.findNavController(requireActivity(), R.id.fragment_container)
-                .navigate(CameraFragmentDirections.actionCameraToPermissions())
-        }
+//        if (!PermissionsFragment.hasPermissions(requireContext())) {
+//            Navigation.findNavController(requireActivity(), R.id.fragment_container)
+//                .navigate(CameraFragmentDirections.actionCameraToPermissions())
+//        }
     }
 
     override fun onDestroyView() {

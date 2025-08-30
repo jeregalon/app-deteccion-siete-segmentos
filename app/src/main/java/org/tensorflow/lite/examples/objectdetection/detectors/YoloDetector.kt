@@ -54,6 +54,7 @@ class YoloDetector(
 
         val ppImage = yolo.preprocess(bitmap)
         val results = yolo.predict(ppImage)
+        print(results)
 
         val detections = ArrayList<ObjectDetection>()
 
