@@ -1,3 +1,5 @@
+package org.tensorflow.lite.examples.objectdetection
+
 /*
  * Copyright 2022 The TensorFlow Authors. All Rights Reserved.
  *
@@ -14,8 +16,6 @@
  * limitations under the License.
  */
 
-package org.tensorflow.lite.examples.objectdetection
-
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
@@ -26,59 +26,61 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
-import android.view.Surface
-import android.view.WindowManager
+import android.view.OrientationEventListener
+import android.widget.ImageView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import org.tensorflow.lite.examples.objectdetection.databinding.ActivityMainBinding
 import org.tensorflow.lite.examples.objectdetection.detectors.ObjectDetection
-import android.view.OrientationEventListener
-import android.widget.ImageView
+import java.util.concurrent.Executors
+import java.util.concurrent.ExecutorService
+import kotlin.concurrent.thread
 
-/**
- * Main entry point into our app. This app follows the single-activity pattern, and all
- * functionality is implemented in the form of fragments.
- */
 class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener {
 
+    private val TAG = "MainActivity"
     private lateinit var activityMainBinding: ActivityMainBinding
+
     private var selectedImageUri: Uri? = null
+    private var selectedBitmap: Bitmap? = null
+
     private var UnitDetectorHelper: ObjectDetectorHelper? = null
     private var MeasurementDetectorHelper: ObjectDetectorHelper? = null
 
-//    private var currentDeviceRotation: Int = 0
-//    private var rotationWhenPhotoWasTaken: Int = 0
+    // Ejecutor para realizar inferencias en background
+    private val detectionExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
-//    private val orientationListener by lazy {
-//        object : OrientationEventListener(this) {
-//            override fun onOrientationChanged(orientation: Int) {
-//                if (orientation == ORIENTATION_UNKNOWN) return
-//
-//                // Normalizamos a múltiplos de 90° (0, 90, 180, 270)
-//                val rounded = when {
-//                    orientation in 45..134 -> 90
-//                    orientation in 135..224 -> 180
-//                    orientation in 225..314 -> 270
-//                    else -> 0
-//                }
-//
-//                currentDeviceRotation = rounded
-//            }
-//        }
-//    }
+    // Estado para saber qué resultado esperamos
+    private enum class WaitState { NONE, WAIT_UNIT, WAIT_MEASUREMENT }
+    @Volatile private var waitState = WaitState.NONE
 
-    // Lanzador para elegir imagen de la galería
+    // Guardar resultados temporales
+    private var unitResults: List<ObjectDetection> = emptyList()
+    private var measurementResults: List<ObjectDetection> = emptyList()
+
+    // Bitmap que se usará para las inferencias
+    private var bitmapForDetection: Bitmap? = null
+
+    // Lanzadores
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data: Intent? = result.data
             selectedImageUri = data?.data
-            activityMainBinding.imageView.setImageURI(selectedImageUri) // mostrar la imagen en el ImageView
+            selectedImageUri?.let { uri ->
+                // Cargar bitmap y mostrar
+                val bmp = getBitmapFromUri(uri)
+                if (bmp != null) {
+                    selectedBitmap = bmp
+                    activityMainBinding.imageView.setImageBitmap(bmp)
+                } else {
+                    Log.w(TAG, "No se pudo cargar bitmap de la URI")
+                }
+            }
         }
     }
 
-    // Lanzador para tomar foto con la cámara
     private val takePhotoLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -86,10 +88,11 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
             val data: Intent? = result.data
             val bitmap = data?.extras?.get("data") as? Bitmap
             bitmap?.let {
-                activityMainBinding.imageView.setImageBitmap(it)
-                // Guardar temporalmente en MediaStore para tener un Uri
-                val uri = saveBitmapToMediaStore(it)
-                selectedImageUri = uri
+                selectedBitmap = it.copy(Bitmap.Config.ARGB_8888, true)
+                activityMainBinding.imageView.setImageBitmap(selectedBitmap)
+                // opcional guardar si quieres un Uri
+                // val uri = saveBitmapToMediaStore(selectedBitmap)
+                // selectedImageUri = uri
             }
         }
     }
@@ -99,7 +102,7 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
         activityMainBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(activityMainBinding.root)
 
-        // Inicializar el detector YOLO
+        // Inicializar los dos detectores (modelos distintos)
         UnitDetectorHelper = ObjectDetectorHelper(
             threshold = 0.5f,
             numThreads = 2,
@@ -113,41 +116,189 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
         MeasurementDetectorHelper = ObjectDetectorHelper(
             threshold = 0.5f,
             numThreads = 2,
-            maxResults = 10,
+            maxResults = 20,
             currentDelegate = ObjectDetectorHelper.DELEGATE_CPU,
             currentModel = ObjectDetectorHelper.MODEL_SEPARATED,
             context = this,
             objectDetectorListener = this
         )
 
-        // Botón para subir imagen
+        // Upload button
         activityMainBinding.btnUpload.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK).apply {
-                type = "image/*"
-            }
+            val intent = Intent(Intent.ACTION_PICK).apply { type = "image/*" }
             pickImageLauncher.launch(intent)
         }
 
-        // Botón para abrir la cámara
+        // Camera button (small bitmap from extras)
         activityMainBinding.btnCamera.setOnClickListener {
             val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
             takePhotoLauncher.launch(intent)
         }
 
-        // Botón para predecir cajas delimitadoras
+        // Predict button: ejecutar ambos detectores secuencialmente en background
         activityMainBinding.btnPredict.setOnClickListener {
-            selectedImageUri?.let { uri ->
-                val bitmap = getBitmapFromUri(uri)
-                bitmap?.let {
-                    UnitDetectorHelper?.detect(it, 0)
-                }
-            } ?: run {
+            val bmp = selectedBitmap ?: run {
                 println("⚠️ Selecciona una imagen antes de predecir")
+                return@setOnClickListener
+            }
+
+            // Guardar bitmap para usar en detectores
+            bitmapForDetection = bmp
+
+            // Disable buttons para evitar re-entradas
+            setUiEnabled(false)
+            activityMainBinding.tvResult.text = "Detectando..."
+
+            // Lanzar trabajo en background: primero UNIT, luego MEASUREMENT
+            detectionExecutor.execute {
+                try {
+                    // Preparar estado
+                    waitState = WaitState.WAIT_UNIT
+                    unitResults = emptyList()
+                    measurementResults = emptyList()
+
+                    // Ejecutar primer detector (esto invocará back onResults cuando termine)
+                    UnitDetectorHelper?.detect(bmp, 0)
+                    // Nota: cuando termine, onResults (en background) lanzará el siguiente detector
+                    // y al final procesará y actualizará la UI.
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error en predicción", e)
+                    runOnUiThread {
+                        activityMainBinding.tvResult.text = "Error en detección"
+                        setUiEnabled(true)
+                    }
+                }
             }
         }
     }
 
-    // Convierte un Uri a Bitmap
+    // ---- DetectorListener callbacks ----
+    override fun onError(error: String) {
+        Log.e(TAG, "Detector error: $error")
+        runOnUiThread {
+            activityMainBinding.tvResult.text = "Error: $error"
+            setUiEnabled(true)
+        }
+    }
+
+    override fun onResults(
+        results: List<ObjectDetection>,
+        inferenceTime: Long,
+        imageHeight: Int,
+        imageWidth: Int
+    ) {
+        // Este método puede ser invocado desde el hilo del detector (nuestro executor).
+        Log.d(TAG, "onResults recibidos. waitState=$waitState  resultsSize=${results.size}")
+
+        when (waitState) {
+            WaitState.WAIT_UNIT -> {
+                // Guardamos los resultados de UnitDetector
+                unitResults = results
+                Log.d(TAG, "Unit results: ${unitResults.size}")
+
+                // Lanzar ahora el detector de caracteres (measurement) en el mismo executor
+                val bmp = bitmapForDetection
+                if (bmp == null) {
+                    Log.w(TAG, "No hay bitmap para la siguiente inferencia")
+                    runOnUiThread {
+                        activityMainBinding.tvResult.text = "Error: bitmap faltante"
+                        setUiEnabled(true)
+                    }
+                    waitState = WaitState.NONE
+                    return
+                }
+
+                // Cambiamos estado antes de invocar el siguiente detect
+                waitState = WaitState.WAIT_MEASUREMENT
+                MeasurementDetectorHelper?.detect(bmp, 0)
+                // Cuando el measurement termine, caeremos en la rama WAIT_MEASUREMENT
+            }
+
+            WaitState.WAIT_MEASUREMENT -> {
+                // Guardamos measurement results y procesamos todo
+                measurementResults = results
+                Log.d(TAG, "Measurement results: ${measurementResults.size}")
+
+                // Volver al estado NONE
+                waitState = WaitState.NONE
+
+                // Procesar measurementResults:
+                val sortedChars = measurementResults.sortedBy { it.boundingBox.left }
+
+                // Construir cadena de lectura
+                val sb = StringBuilder()
+                for (det in sortedChars) {
+                    val lbl = det.category.label.trim()
+                    // map labels to chars robustamente
+                    val ch = when {
+                        lbl == "." || lbl == "dot" || lbl.equals("point", true) -> "."
+                        lbl.length == 1 && lbl[0].isDigit() -> lbl
+                        // si la etiqueta es "10" o "7." etc, intentamos extraer dígitos/dot
+                        else -> {
+                            val filtered = lbl.filter { c -> c.isDigit() || c == '.' }
+                            if (filtered.isNotEmpty()) filtered else ""
+                        }
+                    }
+                    sb.append(ch)
+                }
+                val readingStr = sb.toString().ifEmpty { "—" }
+
+                // Filtrar solo resultados que no sean Measurement ni Lock
+                val filteredUnitResults = unitResults.filter {
+                    it.category.label != "Measurement" && it.category.label != "Lock"
+                }
+
+                // Elegir unidad con mayor confianza (entre las filtradas)
+                val bestUnit = filteredUnitResults.maxByOrNull { it.category.confidence }
+                val unitLabel = bestUnit?.category?.label ?: ""
+
+                // Preparar texto final
+                val resultText = if (unitLabel.isNotEmpty()) {
+                    "$readingStr $unitLabel"
+                } else {
+                    readingStr
+                }
+
+                // Mostrar y dibujar overlay (UI thread)
+                runOnUiThread {
+                    activityMainBinding.tvResult.text = resultText
+
+                    // Para dibujar cajas juntas: unimos ambas listas
+                    val union = ArrayList<ObjectDetection>()
+                    union.addAll(unitResults)
+                    union.addAll(measurementResults)
+
+                    // Calcular displayRect para el overlay
+                    val rect = getImageDisplayRect(activityMainBinding.imageView)
+                    if (rect != null) {
+                        activityMainBinding.overlay.setResults(union, imageHeight, imageWidth, rect)
+                        activityMainBinding.overlay.invalidate()
+                    } else {
+                        // fallback: si no hay displayRect, limpias o pasas sólo measurement
+                        activityMainBinding.overlay.clear()
+                    }
+
+                    // Rehabilitar UI
+                    setUiEnabled(true)
+                }
+            }
+
+            else -> {
+                // Si no estamos esperando nada, ignoramos (o logueamos)
+                Log.w(TAG, "onResults recibido pero waitState = NONE")
+            }
+        }
+    }
+
+    // ---- utilidades ----
+
+    private fun setUiEnabled(enabled: Boolean) {
+        activityMainBinding.btnUpload.isEnabled = enabled
+        activityMainBinding.btnCamera.isEnabled = enabled
+        activityMainBinding.btnPredict.isEnabled = enabled
+    }
+
+    // Convierte un Uri a Bitmap (igual que tenías)
     private fun getBitmapFromUri(uri: Uri): Bitmap? {
         return try {
             if (Build.VERSION.SDK_INT >= 28) {
@@ -163,80 +314,18 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
         }
     }
 
+    // Extra: calcula display rect del ImageView (como ya tenías)
     private fun getImageDisplayRect(imageView: ImageView): RectF? {
         val d = imageView.drawable ?: return null
         val matrix = imageView.imageMatrix
-
         val drawableRect = RectF(0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat())
         val viewRect = RectF()
         matrix.mapRect(viewRect, drawableRect)
-        // viewRect está en coordenadas del ImageView; si el ImageView está en (0,0) del FrameLayout,
-        // coincide con coordenadas del Overlay. Si hubiese padding/desplazamiento, habría que sumarlo.
         return viewRect
     }
 
-    // Guarda un Bitmap en MediaStore y devuelve un Uri
-    private fun saveBitmapToMediaStore(bitmap: Bitmap): Uri? {
-        val path = MediaStore.Images.Media.insertImage(contentResolver, bitmap, "captured_image", null)
-        return Uri.parse(path)
-    }
-
-    // Implementación de DetectorListener
-    override fun onError(error: String) {
-        println("🚨 Detector error: $error")
-    }
-
-    override fun onResults(
-        results: List<ObjectDetection>,
-        inferenceTime: Long,
-        imageHeight: Int,
-        imageWidth: Int
-    ) {
-        runOnUiThread {
-            // Espera al próximo loop de UI para asegurar que ImageView ya tiene drawable y tamaño
-            activityMainBinding.imageView.post {
-                val rect = getImageDisplayRect(activityMainBinding.imageView)
-                if (rect != null) {
-                    activityMainBinding.overlay.setResults(
-                        results = results,
-                        imgHeight = imageHeight,
-                        imgWidth = imageWidth,
-                        displayRect = rect
-                    )
-                } else {
-                    // Si no hay drawable aún, limpia overlay
-                    activityMainBinding.overlay.clear()
-                    Log.w("MainActivity", "No hay drawable en el ImageView; no se puede dibujar overlay.")
-                }
-            }
-        }
-        println("✅ Detección completada en $inferenceTime ms")
-        println("Altura: $imageHeight")
-        println("Ancho: $imageWidth")
-        for (det in results) {
-            println("Objeto detectado: ${det.category.label} (${det.category.confidence})")
-            println("BoundingBox: ${det.boundingBox}")
-        }
-    }
-
-//    override fun onResume() {
-//        super.onResume()
-//        orientationListener.enable()
-//    }
-//
-//    override fun onPause() {
-//        super.onPause()
-//        orientationListener.disable()
-//    }
-
-
-    override fun onBackPressed() {
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
-            // Workaround for Android Q memory leak issue in IRequestFinishCallback$Stub.
-            // (https://issuetracker.google.com/issues/139738913)
-            finishAfterTransition()
-        } else {
-            super.onBackPressed()
-        }
+    override fun onDestroy() {
+        super.onDestroy()
+        detectionExecutor.shutdownNow()
     }
 }
