@@ -168,6 +168,13 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
         imageHeight: Int,
         imageWidth: Int
     ) {
+        runOnUiThread {
+            // Pasar los resultados al overlay
+            activityMainBinding.overlay.setResults(results, imageHeight, imageWidth)
+
+            // Dibujar las cajas
+            activityMainBinding.overlay.invalidate()
+        }
         println("✅ Detección completada en $inferenceTime ms")
         for (det in results) {
             println("Objeto detectado: ${det.category.label} (${det.category.confidence})")
