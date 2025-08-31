@@ -43,7 +43,8 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
 
     private lateinit var activityMainBinding: ActivityMainBinding
     private var selectedImageUri: Uri? = null
-    private var detectorHelper: ObjectDetectorHelper? = null
+    private var UnitDetectorHelper: ObjectDetectorHelper? = null
+    private var MeasurementDetectorHelper: ObjectDetectorHelper? = null
 
 //    private var currentDeviceRotation: Int = 0
 //    private var rotationWhenPhotoWasTaken: Int = 0
@@ -99,12 +100,22 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
         setContentView(activityMainBinding.root)
 
         // Inicializar el detector YOLO
-        detectorHelper = ObjectDetectorHelper(
+        UnitDetectorHelper = ObjectDetectorHelper(
             threshold = 0.5f,
             numThreads = 2,
             maxResults = 3,
             currentDelegate = ObjectDetectorHelper.DELEGATE_CPU,
-            currentModel = ObjectDetectorHelper.MODEL_YOLO,
+            currentModel = ObjectDetectorHelper.MODEL_YOLO_OBB,
+            context = this,
+            objectDetectorListener = this
+        )
+
+        MeasurementDetectorHelper = ObjectDetectorHelper(
+            threshold = 0.5f,
+            numThreads = 2,
+            maxResults = 10,
+            currentDelegate = ObjectDetectorHelper.DELEGATE_CPU,
+            currentModel = ObjectDetectorHelper.MODEL_SEPARATED,
             context = this,
             objectDetectorListener = this
         )
@@ -128,7 +139,7 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
             selectedImageUri?.let { uri ->
                 val bitmap = getBitmapFromUri(uri)
                 bitmap?.let {
-                    detectorHelper?.detect(it, 0)
+                    UnitDetectorHelper?.detect(it, 0)
                 }
             } ?: run {
                 println("⚠️ Selecciona una imagen antes de predecir")

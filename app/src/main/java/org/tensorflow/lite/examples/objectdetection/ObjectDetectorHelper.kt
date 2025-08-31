@@ -21,6 +21,7 @@ import android.os.SystemClock
 import org.tensorflow.lite.examples.objectdetection.detectors.ObjectDetection
 
 import org.tensorflow.lite.examples.objectdetection.detectors.ObjectDetector
+import org.tensorflow.lite.examples.objectdetection.detectors.SeparatedCharactersDetector
 
 import org.tensorflow.lite.examples.objectdetection.detectors.YoloOBBDetector
 import org.tensorflow.lite.support.image.ImageProcessor
@@ -59,7 +60,7 @@ class ObjectDetectorHelper(
 
         try {
 
-//            if (currentModel == MODEL_YOLO) {
+            if (currentModel == MODEL_YOLO_OBB) {
 
                 objectDetector = YoloOBBDetector(
 
@@ -73,8 +74,22 @@ class ObjectDetectorHelper(
 
                 )
 
-//            }
-//            else {
+            }
+            else if (currentModel == MODEL_SEPARATED) {
+
+                objectDetector = SeparatedCharactersDetector(
+
+                    threshold,
+                    0.3f,
+                    numThreads,
+                    maxResults,
+                    currentDelegate,
+                    currentModel,
+                    context,
+
+                    )
+
+            }
 //
 
 
@@ -143,6 +158,7 @@ class ObjectDetectorHelper(
         const val MODEL_EFFICIENTDETV0 = 1
         const val MODEL_EFFICIENTDETV1 = 2
         const val MODEL_EFFICIENTDETV2 = 3
-        const val MODEL_YOLO = 4
+        const val MODEL_YOLO_OBB = 4
+        const val MODEL_SEPARATED = 5
     }
 }
