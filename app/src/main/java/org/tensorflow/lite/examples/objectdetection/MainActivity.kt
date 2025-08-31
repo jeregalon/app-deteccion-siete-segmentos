@@ -32,6 +32,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import org.tensorflow.lite.examples.objectdetection.databinding.ActivityMainBinding
 import org.tensorflow.lite.examples.objectdetection.detectors.ObjectDetection
+import android.view.OrientationEventListener
 
 /**
  * Main entry point into our app. This app follows the single-activity pattern, and all
@@ -43,7 +44,28 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
     private var selectedImageUri: Uri? = null
     private var detectorHelper: ObjectDetectorHelper? = null
 
-    // Registrar el lanzador para elegir imagen de la galería
+//    private var currentDeviceRotation: Int = 0
+//    private var rotationWhenPhotoWasTaken: Int = 0
+
+//    private val orientationListener by lazy {
+//        object : OrientationEventListener(this) {
+//            override fun onOrientationChanged(orientation: Int) {
+//                if (orientation == ORIENTATION_UNKNOWN) return
+//
+//                // Normalizamos a múltiplos de 90° (0, 90, 180, 270)
+//                val rounded = when {
+//                    orientation in 45..134 -> 90
+//                    orientation in 135..224 -> 180
+//                    orientation in 225..314 -> 270
+//                    else -> 0
+//                }
+//
+//                currentDeviceRotation = rounded
+//            }
+//        }
+//    }
+
+    // Lanzador para elegir imagen de la galería
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -66,8 +88,6 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
                 // Guardar temporalmente en MediaStore para tener un Uri
                 val uri = saveBitmapToMediaStore(it)
                 selectedImageUri = uri
-                // Calcular rotación del teléfono
-                val rotation = getDeviceRotationInRadians()
             }
         }
     }
@@ -107,7 +127,6 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
             selectedImageUri?.let { uri ->
                 val bitmap = getBitmapFromUri(uri)
                 bitmap?.let {
-                    // Por ahora rotación = 0, puedes adaptarlo si quieres
                     detectorHelper?.detect(it, 0)
                 }
             } ?: run {
@@ -138,18 +157,6 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
         return Uri.parse(path)
     }
 
-    // Obtiene la rotación del dispositivo en radianes
-    private fun getDeviceRotationInRadians(): Float {
-        val rotation = (getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.rotation
-        return when (rotation) {
-            Surface.ROTATION_0 -> 0f
-            Surface.ROTATION_90 -> Math.PI.toFloat() / 2f
-            Surface.ROTATION_180 -> Math.PI.toFloat()
-            Surface.ROTATION_270 -> 3f * Math.PI.toFloat() / 2f
-            else -> 0f
-        }
-    }
-
     // Implementación de DetectorListener
     override fun onError(error: String) {
         println("🚨 Detector error: $error")
@@ -167,6 +174,17 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
             println("BoundingBox: ${det.boundingBox}")
         }
     }
+
+//    override fun onResume() {
+//        super.onResume()
+//        orientationListener.enable()
+//    }
+//
+//    override fun onPause() {
+//        super.onPause()
+//        orientationListener.disable()
+//    }
+
 
     override fun onBackPressed() {
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {

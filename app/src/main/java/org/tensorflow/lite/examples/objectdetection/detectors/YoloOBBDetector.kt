@@ -56,20 +56,6 @@ class YoloOBBDetector(
         val ppImage = yolo.preprocess(bitmap)
         val results = yolo.predict(ppImage)
 
-//        val TAG = "Yolo Detector"
-
-//        Log.d(TAG, "Resultados brutos: $results")
-//
-//        for ((i, res) in results.withIndex()) {
-//            Log.d("YoloDetector", "===== Objeto #$i =====")
-//            // Listar todas las propiedades por reflexión
-//            for (field in res.javaClass.declaredFields) {
-//                field.isAccessible = true
-//                val value = field.get(res)
-//                Log.d("YoloDetector", "${field.name} = $value")
-//            }
-//        }
-
         val detections = ArrayList<ObjectDetection>()
 
         // ASPECT_RATIO = 4:3
