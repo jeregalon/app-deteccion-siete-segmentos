@@ -60,18 +60,22 @@ class YoloOBBDetector(
 
         // ASPECT_RATIO = 4:3
         // => imgW = imgH * 3/4
-        var imgH: Int
-        var imgW: Int
-        if (imageRotation == 90 || imageRotation == 270) {
-            imgH = ppImage.height
-            imgW = imgH * 3 / 4
-        }
-        else {
-            imgW = ppImage.width
-            imgH = imgW * 3 / 4
+//        var imgH: Int
+//        var imgW: Int
+//        if (imageRotation == 90 || imageRotation == 270) {
+//            imgH = ppImage.height
+//            imgW = imgH * 3 / 4
+//        }
+//        else {
+//            imgW = ppImage.width
+//            imgH = imgW * 3 / 4
+//
+//        }
 
-        }
+        var imgH = bitmap.height
+        var imgW = bitmap.width
 
+        Log.d("ANCHO Y ALTURA:", "ANCHO: $imgW, ALTURA: $imgH")
 
         for (result: DetectedObject in results) {
             val category = Category(
@@ -98,7 +102,7 @@ class YoloOBBDetector(
             detections.add(detection)
         }
 
-        val ret = DetectionResult(ppImage, detections)
+        val ret = DetectionResult(bitmap, detections)
         ret.info = yolo.stats
         return ret
 

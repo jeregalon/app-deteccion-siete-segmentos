@@ -19,7 +19,7 @@
             android:adjustViewBounds="true" />
 
         <!-- Capa transparente para los bounding boxes -->
-        <org.tensorflow.lite.examples.objectdetection.OverlayView
+        <org.tensorflow.lite.examples.objectdetection.OverlayViewOnPicture
             android:id="@+id/overlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

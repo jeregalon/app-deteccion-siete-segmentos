@@ -33,6 +33,7 @@ import androidx.appcompat.app.AppCompatActivity
 import org.tensorflow.lite.examples.objectdetection.databinding.ActivityMainBinding
 import org.tensorflow.lite.examples.objectdetection.detectors.ObjectDetection
 import android.view.OrientationEventListener
+import android.widget.ImageView
 
 /**
  * Main entry point into our app. This app follows the single-activity pattern, and all
@@ -151,6 +152,18 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
         }
     }
 
+    private fun getImageDisplayRect(imageView: ImageView): RectF? {
+        val d = imageView.drawable ?: return null
+        val matrix = imageView.imageMatrix
+
+        val drawableRect = RectF(0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat())
+        val viewRect = RectF()
+        matrix.mapRect(viewRect, drawableRect)
+        // viewRect está en coordenadas del ImageView; si el ImageView está en (0,0) del FrameLayout,
+        // coincide con coordenadas del Overlay. Si hubiese padding/desplazamiento, habría que sumarlo.
+        return viewRect
+    }
+
     // Guarda un Bitmap en MediaStore y devuelve un Uri
     private fun saveBitmapToMediaStore(bitmap: Bitmap): Uri? {
         val path = MediaStore.Images.Media.insertImage(contentResolver, bitmap, "captured_image", null)
@@ -169,13 +182,26 @@ class MainActivity : AppCompatActivity(), ObjectDetectorHelper.DetectorListener 
         imageWidth: Int
     ) {
         runOnUiThread {
-            // Pasar los resultados al overlay
-            activityMainBinding.overlay.setResults(results, imageHeight, imageWidth)
-
-            // Dibujar las cajas
-            activityMainBinding.overlay.invalidate()
+            // Espera al próximo loop de UI para asegurar que ImageView ya tiene drawable y tamaño
+            activityMainBinding.imageView.post {
+                val rect = getImageDisplayRect(activityMainBinding.imageView)
+                if (rect != null) {
+                    activityMainBinding.overlay.setResults(
+                        results = results,
+                        imgHeight = imageHeight,
+                        imgWidth = imageWidth,
+                        displayRect = rect
+                    )
+                } else {
+                    // Si no hay drawable aún, limpia overlay
+                    activityMainBinding.overlay.clear()
+                    Log.w("MainActivity", "No hay drawable en el ImageView; no se puede dibujar overlay.")
+                }
+            }
         }
         println("✅ Detección completada en $inferenceTime ms")
+        println("Altura: $imageHeight")
+        println("Ancho: $imageWidth")
         for (det in results) {
             println("Objeto detectado: ${det.category.label} (${det.category.confidence})")
             println("BoundingBox: ${det.boundingBox}")
