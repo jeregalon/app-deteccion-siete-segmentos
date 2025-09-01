@@ -22,11 +22,14 @@ import org.tensorflow.lite.examples.objectdetection.detectors.ObjectDetection
 
 import org.tensorflow.lite.examples.objectdetection.detectors.ObjectDetector
 import org.tensorflow.lite.examples.objectdetection.detectors.SeparatedCharactersDetector
+import org.tensorflow.lite.examples.objectdetection.detectors.TaskVisionDetector
 
 import org.tensorflow.lite.examples.objectdetection.detectors.YoloOBBDetector
 import org.tensorflow.lite.support.image.ImageProcessor
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.image.ops.Rot90Op
+import org.tensorflow.lite.task.core.BaseOptions
+import org.tensorflow.lite.task.vision.detector.ObjectDetector.ObjectDetectorOptions
 
 
 class ObjectDetectorHelper(
@@ -60,7 +63,7 @@ class ObjectDetectorHelper(
 
         try {
 
-            if (currentModel == MODEL_YOLO_OBB) {
+            if (currentModel == MODEL_YOLO_COMBINED) {
 
                 objectDetector = YoloOBBDetector(
 
@@ -75,15 +78,42 @@ class ObjectDetectorHelper(
                 )
 
             }
-            else if (currentModel == MODEL_SEPARATED) {
+            else {
 
-                objectDetector = SeparatedCharactersDetector(
+                // Create the base options for the detector using specifies max results and score threshold
+                val optionsBuilder =
+                    ObjectDetectorOptions.builder()
+                        .setScoreThreshold(threshold)
+                        .setMaxResults(maxResults)
 
-                    threshold,
-                    0.3f,
-                    numThreads,
-                    maxResults,
-                    currentDelegate,
+                // Set general detection options, including number of used threads
+                val baseOptionsBuilder = BaseOptions.builder().setNumThreads(numThreads)
+
+                // Use the specified hardware for running the model. Default to CPU
+                when (currentDelegate) {
+                    DELEGATE_CPU -> {
+                        // Default
+                    }
+                    DELEGATE_GPU -> {
+//                        if (CompatibilityList().isDelegateSupportedOnThisDevice) {
+//                            baseOptionsBuilder.useGpu()
+//                        } else {
+//                            objectDetectorListener?.onError("GPU is not supported on this device")
+//                        }
+                        // for some reason CompatibilityList().isDelegateSupportedOnThisDevice
+                        // returns False in my Motorola Edge 30 Ultra, but GPU works :/
+                        baseOptionsBuilder.useGpu()
+                    }
+                    DELEGATE_NNAPI -> {
+                        baseOptionsBuilder.useNnapi()
+                    }
+                }
+
+                optionsBuilder.setBaseOptions(baseOptionsBuilder.build())
+                val options = optionsBuilder.build()
+
+                objectDetector = TaskVisionDetector(
+                    options,
                     currentModel,
                     context,
 
@@ -158,7 +188,6 @@ class ObjectDetectorHelper(
         const val MODEL_EFFICIENTDETV0 = 1
         const val MODEL_EFFICIENTDETV1 = 2
         const val MODEL_EFFICIENTDETV2 = 3
-        const val MODEL_YOLO_OBB = 4
-        const val MODEL_SEPARATED = 5
+        const val MODEL_YOLO_COMBINED = 4
     }
 }

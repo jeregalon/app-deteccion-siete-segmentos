@@ -40,6 +40,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import org.tensorflow.lite.examples.objectdetection.ObjectDetectorHelper
 import org.tensorflow.lite.examples.objectdetection.R
+import org.tensorflow.lite.examples.objectdetection.YOLOUtils.processDetections
 import org.tensorflow.lite.examples.objectdetection.databinding.FragmentCameraBinding
 import org.tensorflow.lite.examples.objectdetection.detectors.ObjectDetection
 import java.util.LinkedList
@@ -62,6 +63,8 @@ class CameraFragment : Fragment(), ObjectDetectorHelper.DetectorListener {
 
     /** Blocking camera operations are performed using this executor */
     private lateinit var cameraExecutor: ExecutorService
+
+    private var selectedModel: Int = 0
 
     override fun onResume() {
         super.onResume()
@@ -169,6 +172,7 @@ class CameraFragment : Fragment(), ObjectDetectorHelper.DetectorListener {
             object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
                     objectDetectorHelper.currentDelegate = p2
+                    selectedModel = p2
                     updateControlsUi()
                 }
 
@@ -308,17 +312,29 @@ class CameraFragment : Fragment(), ObjectDetectorHelper.DetectorListener {
     ) {
         activity?.runOnUiThread {
             fragmentCameraBinding.bottomSheetLayout.inferenceTimeVal.text =
-                            String.format("%d ms", inferenceTime)
+                String.format("%d ms", inferenceTime)
 
-            // Pass necessary information to OverlayView for drawing on the canvas
-            fragmentCameraBinding.overlay.setResults(
-                results ?: LinkedList<ObjectDetection>(),
-                imageHeight,
-                imageWidth
-            )
+            if (selectedModel == 4) {
+                // 👇 Usamos nuestra función que procesa resultados de caracteres + unidades
+                val measurementResult = processDetections(results)
 
-            // Force a redraw
-            fragmentCameraBinding.overlay.invalidate()
+                if (measurementResult != null) {
+                    val (value, unit) = measurementResult
+                    fragmentCameraBinding.textMeasurementResult.text =
+                        "Medición: $value $unit"
+                } else {
+                    fragmentCameraBinding.textMeasurementResult.text =
+                        "No se detectó ninguna medición"
+                }
+
+            } else {
+                fragmentCameraBinding.overlay.setResults(
+                    results ?: LinkedList<ObjectDetection>(),
+                    imageHeight,
+                    imageWidth
+                )
+                fragmentCameraBinding.overlay.invalidate()
+            }
         }
     }
 

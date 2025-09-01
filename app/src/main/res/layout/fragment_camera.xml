@@ -31,6 +31,17 @@
         android:layout_height="match_parent"
         android:layout_width="match_parent" />
 
+    <TextView
+        android:id="@+id/textMeasurementResult"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:padding="12dp"
+        android:background="#AA000000"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:text="Esperando medición..." />
+
     <include
         android:id="@+id/bottom_sheet_layout"
         layout="@layout/info_bottom_sheet" />

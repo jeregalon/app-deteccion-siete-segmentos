@@ -64,10 +64,10 @@ class PermissionsFragment : Fragment() {
     }
 
     private fun navigateToCamera() {
-//        lifecycleScope.launchWhenStarted {
-//            Navigation.findNavController(requireActivity(), R.id.fragment_container).navigate(
-//                PermissionsFragmentDirections.actionPermissionsToCamera())
-//        }
+        lifecycleScope.launchWhenStarted {
+            Navigation.findNavController(requireActivity(), R.id.fragment_container).navigate(
+                PermissionsFragmentDirections.actionPermissionsToCamera())
+        }
     }
 
     companion object {
